@@ -1,57 +1,45 @@
-import { ethers } from "ethers";
-import { tokenABI } from "./ABI";
-import { useEffect, useState } from "react";
+import { client } from "./client";
+import {
+  ConnectButton,
+  useActiveAccount,
+  useWalletBalance,
+  useReadContract,
+} from "thirdweb/react";
+import { base } from "thirdweb/chains";
+import { getContract } from "thirdweb";
+// import { tokenABI } from "./ABI";
+
+// base
 const tokenAddress = "0xa8524f873D1bcD0F1AD783416c82E32Bc58fFa77";
+const contract = getContract({
+  client,
+  address: tokenAddress,
+  chain: base,
+});
 
 function App() {
-  const [ETHBal, setETHBal] = useState<number | null>(null);
-  const [tokenBal, setTokenBal] = useState<number | null>(null);
-  const [userAddr, setUserAddr] = useState<string>();
-  useEffect(() => {
-    const getBalances = async () => {
-      const provider = await handleConnect();
-      if (!provider) return alert("Could not connect");
-      const userAddress = (await provider.signer).address;
-      setUserAddr(userAddress);
-      const ethbalance = await provider.provider.getBalance(userAddress);
-      setETHBal(Number(ethbalance));
-      const contract = new ethers.Contract(
-        tokenAddress,
-        tokenABI,
-        provider.provider
-      );
+  const account = useActiveAccount();
+  const { data: balance, isLoading } = useWalletBalance({
+    client,
+    chain: base,
+    address: account?.address,
+  });
 
-      const tokenBalance = await contract.balanceOf(userAddress);
-      console.log("token balance", tokenBalance);
-      setTokenBal(Number(tokenBalance));
-    };
-
-    getBalances();
-  }, []);
-
-  const handleConnect = async () => {
-    if (window.ethereum) {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
-      return { provider, signer };
-    } else {
-      alert("Install metamask");
-    }
-  };
-
-  function truncAddr(addr: string) {
-    const firstPart = addr.slice(0, 5);
-    const secondPart = addr.slice(addr.length - 5, addr.length);
-    return `${firstPart}...${secondPart}`;
-  }
+  const { data, isLoading: loadingTokenBalance } = useReadContract({
+    contract,
+    method: "function balanceOf(address account) returns (uint256)",
+    params: [account?.address || ""], // type safe params
+  });
   return (
     <div>
-      <button onClick={handleConnect}>
-        {userAddr ? truncAddr(userAddr) : "Connect wallet"}
-      </button>
-      <p>ETH balance: {ETHBal == null ? "Loading..." : ETHBal}</p>
-      <p>Token balance: {tokenBal == null ? "Loading..." : tokenBal}</p>
+      <ConnectButton client={client} />
+      <p>
+        ETH balance:
+        {`${isLoading ? "loading..." : ` ${balance?.displayValue || 0} `}`}
+      </p>
+      <p>
+        Token balance: {`${loadingTokenBalance ? "loading..." : Number(data)}`}{" "}
+      </p>
     </div>
   );
 }

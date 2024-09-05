@@ -1,10 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.js";
+import { ThirdwebProvider } from "thirdweb/react";
+import App from "./App";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ThirdwebProvider>
+      <App />
+    </ThirdwebProvider>
   </StrictMode>
 );
